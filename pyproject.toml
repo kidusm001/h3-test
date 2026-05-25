@@ -1,0 +1,11 @@
+[project]
+name = "h3-test"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.136.3",
+    "h3>=4.4.2",
+    "uvicorn>=0.48.0",
+]

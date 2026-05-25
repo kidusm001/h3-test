@@ -1,0 +1,574 @@
+{
+  "routes": [
+    {
+      "route_name": "Morning-Bole-001",
+      "route_range": "Short",
+      "route_type": "Drop-off",
+      "assigned_to": "INTERNAL",
+      "vendor": null,
+      "vehicle_category": "Van",
+      "driver": "Abebe Kebede",
+      "branch": "Main Branch",
+      "calculated_distance": 8.5,
+      "estimated_cost": 150.0,
+      "status": "ACTIVE",
+      "assigned_vehicle": "AA 00123",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "06:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Bole Atlas",
+          "lat": 8.992,
+          "lng": 38.807,
+          "address": "Bole Atlas, Addis Ababa",
+          "estimated_arrival": "06:35:00",
+          "h3_index": "89529b7900bffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Bole Medhanealem",
+          "lat": 8.994,
+          "lng": 38.788,
+          "address": "Bole Medhanealem, Addis Ababa",
+          "estimated_arrival": "07:10:00",
+          "h3_index": "89529b79603ffff"
+        },
+        {
+          "stop_order": 4,
+          "name": "Megenagna",
+          "lat": 9.021,
+          "lng": 38.792,
+          "address": "Megenagna, Addis Ababa",
+          "estimated_arrival": "07:50:00",
+          "h3_index": "89529b7b26bffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b7900bffff",
+        "89529b79603ffff",
+        "89529b7b26bffff"
+      ]
+    },
+    {
+      "route_name": "Afternoon-Merkato-002",
+      "route_range": "Short",
+      "route_type": "Pick-UP",
+      "assigned_to": "INTERNAL",
+      "vendor": null,
+      "vehicle_category": "Van",
+      "driver": "Mulugeta Assefa",
+      "branch": "Main Branch",
+      "calculated_distance": 7.2,
+      "estimated_cost": 120.0,
+      "status": "ACTIVE",
+      "assigned_vehicle": "AA 00456",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "13:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Piazza",
+          "lat": 9.028,
+          "lng": 38.746,
+          "address": "Piazza, Addis Ababa",
+          "estimated_arrival": "13:30:00",
+          "h3_index": "89529b4cc4fffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Merkato",
+          "lat": 9.038,
+          "lng": 38.747,
+          "address": "Merkato, Addis Ababa",
+          "estimated_arrival": "14:15:00",
+          "h3_index": "89529b4ccc7ffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4cc4fffff",
+        "89529b4ccc7ffff"
+      ]
+    },
+    {
+      "route_name": "Long-Haul-North-001",
+      "route_range": "Long",
+      "route_type": "Drop-off",
+      "assigned_to": "VENDOR",
+      "vendor": "EthioTrans Logistics",
+      "vehicle_category": "Heavy Truck",
+      "driver": "Haile Gebreselassie",
+      "branch": "Main Branch",
+      "calculated_distance": 18.0,
+      "estimated_cost": 6500.0,
+      "status": "ACTIVE",
+      "assigned_vehicle": "AA 00789",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "05:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Siddist Kilo",
+          "lat": 9.037,
+          "lng": 38.757,
+          "address": "Siddist Kilo, Addis Ababa",
+          "estimated_arrival": "05:45:00",
+          "h3_index": "89529b4ccabffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Summit",
+          "lat": 9.047,
+          "lng": 38.743,
+          "address": "Summit, Addis Ababa",
+          "estimated_arrival": "06:20:00",
+          "h3_index": "89529b4ea73ffff"
+        },
+        {
+          "stop_order": 4,
+          "name": "Kotebe",
+          "lat": 9.06,
+          "lng": 38.79,
+          "address": "Kotebe, Addis Ababa",
+          "estimated_arrival": "07:00:00",
+          "h3_index": "89529b7b697ffff"
+        },
+        {
+          "stop_order": 5,
+          "name": "Yeka",
+          "lat": 9.03,
+          "lng": 38.81,
+          "address": "Yeka, Addis Ababa",
+          "estimated_arrival": "07:40:00",
+          "h3_index": "89529b7b3cfffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4ccabffff",
+        "89529b4ea73ffff",
+        "89529b7b3cfffff",
+        "89529b7b697ffff"
+      ]
+    },
+    {
+      "route_name": "Express-CMC-001",
+      "route_range": "Short",
+      "route_type": "Drop-off",
+      "assigned_to": "INTERNAL",
+      "vendor": null,
+      "vehicle_category": "Motorcycle",
+      "driver": "Birhanu Tolosa",
+      "branch": "Main Branch",
+      "calculated_distance": 4.5,
+      "estimated_cost": 65.0,
+      "status": "PENDING",
+      "assigned_vehicle": "AA 00012",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "10:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "CMC",
+          "lat": 9.015,
+          "lng": 38.809,
+          "address": "CMC, Addis Ababa",
+          "estimated_arrival": "10:30:00",
+          "h3_index": "89529b794afffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b794afffff"
+      ]
+    },
+    {
+      "route_name": "Weekend-South-001",
+      "route_range": "Long",
+      "route_type": "Pick-UP",
+      "assigned_to": "VENDOR",
+      "vendor": "Sheba Transport",
+      "vehicle_category": "Heavy Truck",
+      "driver": "Tirunesh Dibaba",
+      "branch": "Main Branch",
+      "calculated_distance": 22.0,
+      "estimated_cost": 6000.0,
+      "status": "ACTIVE",
+      "assigned_vehicle": "AA 00345",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "06:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Saris",
+          "lat": 8.995,
+          "lng": 38.781,
+          "address": "Saris, Addis Ababa",
+          "estimated_arrival": "06:30:00",
+          "h3_index": "89529b796cfffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Kaliti",
+          "lat": 8.91,
+          "lng": 38.733,
+          "address": "Kaliti, Addis Ababa",
+          "estimated_arrival": "07:15:00",
+          "h3_index": "897acb48c13ffff"
+        },
+        {
+          "stop_order": 4,
+          "name": "Nifas Silk",
+          "lat": 8.97,
+          "lng": 38.725,
+          "address": "Nifas Silk, Addis Ababa",
+          "estimated_arrival": "08:00:00",
+          "h3_index": "89529b4dbbbffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4dbbbffff",
+        "89529b796cfffff",
+        "897acb48c13ffff"
+      ]
+    },
+    {
+      "route_name": "Maintenance-Lideta-001",
+      "route_range": "Short",
+      "route_type": "Drop-off",
+      "assigned_to": "INTERNAL",
+      "vendor": null,
+      "vehicle_category": "Van",
+      "driver": "Dawit Wolde",
+      "branch": "Main Branch",
+      "calculated_distance": 6.0,
+      "estimated_cost": 90.0,
+      "status": "INACTIVE",
+      "assigned_vehicle": "AA 00678",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "09:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Lideta Workshop",
+          "lat": 9.008,
+          "lng": 38.742,
+          "address": "Lideta, Addis Ababa",
+          "estimated_arrival": "09:30:00",
+          "h3_index": "89529b4ca9bffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Mexico Garage",
+          "lat": 9.007,
+          "lng": 38.763,
+          "address": "Mexico Square, Addis Ababa",
+          "estimated_arrival": "10:15:00",
+          "h3_index": "89529b4c867ffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4c867ffff",
+        "89529b4ca9bffff"
+      ]
+    },
+    {
+      "route_name": "Bulk-Transfer-West-001",
+      "route_range": "Long",
+      "route_type": "Drop-off",
+      "assigned_to": "VENDOR",
+      "vendor": "Habesha Freight",
+      "vehicle_category": "Heavy Truck",
+      "driver": "Almaz Ayana",
+      "branch": "Main Branch",
+      "calculated_distance": 16.0,
+      "estimated_cost": 3500.0,
+      "status": "CANCELLED",
+      "assigned_vehicle": "AA 00901",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "04:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Kera",
+          "lat": 8.995,
+          "lng": 38.738,
+          "address": "Kera, Addis Ababa",
+          "estimated_arrival": "04:40:00",
+          "h3_index": "89529b4ca43ffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Lafto",
+          "lat": 8.965,
+          "lng": 38.71,
+          "address": "Lafto, Addis Ababa",
+          "estimated_arrival": "05:30:00",
+          "h3_index": "89529b4da27ffff"
+        },
+        {
+          "stop_order": 4,
+          "name": "Jemo",
+          "lat": 8.945,
+          "lng": 38.7,
+          "address": "Jemo, Addis Ababa",
+          "estimated_arrival": "06:10:00",
+          "h3_index": "897acb48ba7ffff"
+        },
+        {
+          "stop_order": 5,
+          "name": "Akaki",
+          "lat": 8.867,
+          "lng": 38.775,
+          "address": "Akaki, Addis Ababa",
+          "estimated_arrival": "07:15:00",
+          "h3_index": "897acb4a38fffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4ca43ffff",
+        "89529b4da27ffff",
+        "897acb48ba7ffff",
+        "897acb4a38fffff"
+      ]
+    },
+    {
+      "route_name": "City-Loop-Morning-001",
+      "route_range": "Short",
+      "route_type": "Pick-UP",
+      "assigned_to": "INTERNAL",
+      "vendor": null,
+      "vehicle_category": "Van",
+      "driver": "Meseret Defar",
+      "branch": "Main Branch",
+      "calculated_distance": 12.0,
+      "estimated_cost": 180.0,
+      "status": "ACTIVE",
+      "assigned_vehicle": "AA 00234",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "07:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Urael Church",
+          "lat": 9.011,
+          "lng": 38.774,
+          "address": "Urael Church, Addis Ababa",
+          "estimated_arrival": "07:20:00",
+          "h3_index": "89529b4c943ffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Hayahulet",
+          "lat": 9.019,
+          "lng": 38.78,
+          "address": "Hayahulet, Addis Ababa",
+          "estimated_arrival": "07:50:00",
+          "h3_index": "89529b4c98fffff"
+        },
+        {
+          "stop_order": 4,
+          "name": "Gerji",
+          "lat": 9.011,
+          "lng": 38.803,
+          "address": "Gerji, Addis Ababa",
+          "estimated_arrival": "08:30:00",
+          "h3_index": "89529b7940fffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4c943ffff",
+        "89529b4c98fffff",
+        "89529b7940fffff"
+      ]
+    },
+    {
+      "route_name": "Regional-Dist-East-001",
+      "route_range": "Long",
+      "route_type": "Drop-off",
+      "assigned_to": "INTERNAL",
+      "vendor": null,
+      "vehicle_category": "Light Truck",
+      "driver": "Genet Abate",
+      "branch": "Main Branch",
+      "calculated_distance": 20.0,
+      "estimated_cost": 4800.0,
+      "status": "ACTIVE",
+      "assigned_vehicle": "AA 00567",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "05:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Olympia",
+          "lat": 9.01,
+          "lng": 38.775,
+          "address": "Olympia, Addis Ababa",
+          "estimated_arrival": "05:20:00",
+          "h3_index": "89529b4c943ffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Gotera",
+          "lat": 9.0,
+          "lng": 38.778,
+          "address": "Gotera, Addis Ababa",
+          "estimated_arrival": "05:50:00",
+          "h3_index": "89529b796dbffff"
+        },
+        {
+          "stop_order": 4,
+          "name": "Ayat",
+          "lat": 8.986,
+          "lng": 38.823,
+          "address": "Ayat, Addis Ababa",
+          "estimated_arrival": "06:40:00",
+          "h3_index": "89529b7914bffff"
+        },
+        {
+          "stop_order": 5,
+          "name": "Bole Bulbula",
+          "lat": 8.96,
+          "lng": 38.78,
+          "address": "Bole Bulbula, Addis Ababa",
+          "estimated_arrival": "07:30:00",
+          "h3_index": "897acb49e33ffff"
+        },
+        {
+          "stop_order": 6,
+          "name": "Airport Cargo",
+          "lat": 8.977,
+          "lng": 38.799,
+          "address": "Bole Airport, Addis Ababa",
+          "estimated_arrival": "08:15:00",
+          "h3_index": "89529b79203ffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b4c943ffff",
+        "89529b7914bffff",
+        "89529b79203ffff",
+        "89529b796dbffff",
+        "897acb49e33ffff"
+      ]
+    },
+    {
+      "route_name": "Night-Shift-Bole-001",
+      "route_range": "Short",
+      "route_type": "Drop-off",
+      "assigned_to": "VENDOR",
+      "vendor": "Abyssinia Carriers",
+      "vehicle_category": "Van",
+      "driver": "Tadesse Mekonnen",
+      "branch": "Main Branch",
+      "calculated_distance": 14.0,
+      "estimated_cost": 220.0,
+      "status": "PENDING",
+      "assigned_vehicle": "AA 00890",
+      "route_members": [
+        {
+          "stop_order": 1,
+          "name": "Depot",
+          "lat": 9.016423005220119,
+          "lng": 38.76855820964179,
+          "address": "Kazanchis, Addis Ababa",
+          "estimated_arrival": "22:00:00",
+          "h3_index": "89529b4c837ffff"
+        },
+        {
+          "stop_order": 2,
+          "name": "Bole Airport Area",
+          "lat": 8.977,
+          "lng": 38.799,
+          "address": "Bole Airport, Addis Ababa",
+          "estimated_arrival": "22:45:00",
+          "h3_index": "89529b79203ffff"
+        },
+        {
+          "stop_order": 3,
+          "name": "Bole Bulbula",
+          "lat": 8.96,
+          "lng": 38.78,
+          "address": "Bole Bulbula, Addis Ababa",
+          "estimated_arrival": "23:30:00",
+          "h3_index": "897acb49e33ffff"
+        }
+      ],
+      "h3_cells": [
+        "89529b4c837ffff",
+        "89529b79203ffff",
+        "897acb49e33ffff"
+      ]
+    }
+  ]
+}
