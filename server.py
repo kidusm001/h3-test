@@ -34,6 +34,34 @@ def save_routes_data(data):
         json.dump(data, f, indent=2)
 
 
+def geometry_to_cells(geometry: list, res: int) -> set:
+    cells = set()
+    for pt in geometry:
+        lat, lng = pt[0], pt[1]
+        cells.add(h3.latlng_to_cell(lat, lng, res))
+    return cells
+
+
+def interpolate_path_cells(route: dict, res: int) -> set:
+    cells = set()
+    stops = route.get("route_members", [])
+    if len(stops) < 2:
+        if stops:
+            cells.add(h3.latlng_to_cell(stops[0]["lat"], stops[0]["lng"], res))
+        return cells
+    for i in range(len(stops) - 1):
+        lat1, lng1 = stops[i]["lat"], stops[i]["lng"]
+        lat2, lng2 = stops[i+1]["lat"], stops[i+1]["lng"]
+        dist_km = h3.great_circle_distance((lat1, lng1), (lat2, lng2), unit="km")
+        num_steps = max(2, int(dist_km / 0.05))
+        for j in range(num_steps + 1):
+            frac = j / num_steps
+            lat = lat1 + (lat2 - lat1) * frac
+            lng = lng1 + (lng2 - lng1) * frac
+            cells.add(h3.latlng_to_cell(lat, lng, res))
+    return cells
+
+
 def get_boundary_coords(cell_index: str) -> List[List[float]]:
     try:
         boundary = h3.cell_to_boundary(cell_index)
@@ -203,7 +231,8 @@ def match_candidate(
                     "nearest_stop_km": hit["distance_km"],
                     "nearest_stop": hit["stop_name"],
                     "exact_cells": [],
-                    "nearby_cells": []
+                    "nearby_cells": [],
+                    "matched_by": "stop"
                 }
             
             summary = routes_summary[r_name]
@@ -226,9 +255,66 @@ def match_candidate(
                 summary["nearest_stop_km"] = hit["distance_km"]
                 summary["nearest_stop"] = hit["stop_name"]
 
+        # Collect path-match geometry cells for map visualization
+        path_pass_cells = []
+
+        # Path-based matching: check routes whose actual driving path passes through the
+        # k-ring even though no stop is within range — uses OSRM road geometry when
+        # available for accuracy, falls back to straight-line interpolation between stops
+        for route in routes:
+            r_name = route["route_name"]
+            if r_name in routes_summary:
+                continue
+
+            # Try OSRM road geometry first (cached from /api/routes or freshly fetched)
+            geom = route.get("osrm_geometry") or OSRM_GEOMETRY_CACHE.get(r_name)
+            if geom:
+                path_cells = geometry_to_cells(geom, res)
+            else:
+                coords = [[s["lat"], s["lng"]] for s in route.get("route_members", [])]
+                geom = fetch_osrm_route(coords)
+                OSRM_GEOMETRY_CACHE[r_name] = geom
+                path_cells = geometry_to_cells(geom, res)
+
+            overlap_cells = path_cells & ring_set
+            if overlap_cells:
+                # Route path passes through candidate area — find nearest stop regardless
+                stops = route.get("route_members", [])
+                nearest_stop_km = min(
+                    h3.great_circle_distance((lat, lng), (s["lat"], s["lng"]), unit="km")
+                    for s in stops
+                ) if stops else 999.0
+                nearest_stop = min(
+                    stops,
+                    key=lambda s: h3.great_circle_distance(
+                        (lat, lng), (s["lat"], s["lng"]), unit="km"
+                    ),
+                )["name"] if stops else "N/A"
+
+                overlap_geom = [{
+                    "index": c,
+                    "boundary": get_boundary_coords(c)
+                } for c in overlap_cells]
+                path_pass_cells.extend(overlap_geom)
+
+                routes_summary[r_name] = {
+                    "route_name": r_name,
+                    "status": route["status"],
+                    "assigned_vehicle": route["assigned_vehicle"],
+                    "driver": route["driver"],
+                    "exact_match": False,
+                    "nearby_match_count": 0,
+                    "nearest_stop_km": round(nearest_stop_km, 3),
+                    "nearest_stop": nearest_stop,
+                    "exact_cells": [],
+                    "nearby_cells": [],
+                    "matched_by": "path",
+                    "path_overlap_cells": overlap_geom
+                }
+
         # Sort summary results: exact match first, then by nearest stop distance
         matches = list(routes_summary.values())
-        matches.sort(key=lambda m: (not m["exact_match"], m["nearest_stop_km"]))
+        matches.sort(key=lambda m: (not m["exact_match"], {"path": 2, "stop": 1}.get(m.get("matched_by", "stop"), 1), m["nearest_stop_km"]))
 
         return {
             "sql_query": mock_sql,
@@ -238,7 +324,8 @@ def match_candidate(
             },
             "k_ring_cells": k_ring_data,
             "db_hits": db_hits,
-            "matches": matches
+            "matches": matches,
+            "path_pass_cells": path_pass_cells
         }
 
     except Exception as e:

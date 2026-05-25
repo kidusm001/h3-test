@@ -308,8 +308,8 @@ export default function App() {
                     >
                       <div className="route-card-header">
                         <span className="route-name">{match.route_name}</span>
-                        <span className={`match-badge ${match.exact_match ? 'exact' : 'nearby'}`}>
-                          {match.exact_match ? 'Exact Match' : 'Nearby'}
+                        <span className={`match-badge ${match.exact_match ? 'exact' : match.matched_by === 'path' ? 'path' : 'nearby'}`}>
+                          {match.exact_match ? 'Exact Match' : match.matched_by === 'path' ? 'Path Pass-through' : 'Nearby Stop'}
                         </span>
                       </div>
 
@@ -339,7 +339,7 @@ export default function App() {
                 })
               ) : (
                 <div className="no-matches">
-                  No routes within the {k}-ring threshold. Increase k or the distance filter.
+                  No routes within the {k}-ring threshold. Increase k, the distance filter, or check if a route path passes through this area.
                 </div>
               )}
             </div>

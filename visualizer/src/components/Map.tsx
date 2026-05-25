@@ -140,7 +140,7 @@ export const Map: React.FC<MapProps> = ({
 
     // B. Draw candidate matching geometry
     if (matchData) {
-      const { candidate_cell, k_ring_cells, matches, db_hits } = matchData;
+      const { candidate_cell, k_ring_cells, matches, db_hits, path_pass_cells } = matchData;
 
       // 1. Draw K-Ring Cells (outer rings) if enabled
       if (showH3Rings && k_ring_cells) {
@@ -191,6 +191,20 @@ export const Map: React.FC<MapProps> = ({
             }).addTo(layers);
           });
         }
+      }
+
+      // 3b. Draw path-pass cells (overlap between route geometry and k-ring, no stops nearby)
+      if (path_pass_cells && path_pass_cells.length > 0) {
+        path_pass_cells.forEach(cell => {
+          L.polygon(cell.boundary, {
+            color: '#f472b6',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#f472b6',
+            fillOpacity: 0.25,
+            dashArray: '4, 4'
+          }).addTo(layers);
+        });
       }
 
       // 4. Draw database query hits on map (descriptive validation)

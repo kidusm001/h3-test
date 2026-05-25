@@ -42,6 +42,8 @@ export interface RouteMatch {
   nearest_stop: string;
   exact_cells: H3CellGeometry[];
   nearby_cells: H3CellGeometry[];
+  matched_by?: 'stop' | 'path';
+  path_overlap_cells?: H3CellGeometry[];
 }
 
 export interface DatabaseHit {
@@ -61,4 +63,5 @@ export interface MatchResponse {
   k_ring_cells: H3CellGeometry[];
   db_hits: DatabaseHit[];
   matches: RouteMatch[];
+  path_pass_cells?: H3CellGeometry[];
 }

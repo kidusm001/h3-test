@@ -353,6 +353,11 @@ input[type="range"] {
   color: var(--accent-amber);
 }
 
+.match-badge.path {
+  background: oklch(0.25 0.07 340);
+  color: #f472b6;
+}
+
 .route-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
