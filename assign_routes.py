@@ -110,7 +110,18 @@ def main():
     parser.add_argument("--file", default="route_data.json")
     args = parser.parse_args()
 
-    routes = load_routes(args.file)
+    # Load full data for red zone check
+    with open(args.file) as f:
+        full_data = json.load(f)
+    red_zones = set(full_data.get("red_zones", []))
+
+    # Red Zone check
+    candidate_rz_cell = h3.latlng_to_cell(args.lat, args.lng, RES)
+    if candidate_rz_cell in red_zones:
+        print(f"REJECTED: Candidate at ({args.lat}, {args.lng}) is in a restricted area (cell: {candidate_rz_cell})")
+        return
+
+    routes = full_data["routes"]
     matches = candidate_matches(args.lat, args.lng, routes, args.k)
 
     if not matches:

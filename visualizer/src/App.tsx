@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { Route, MatchResponse } from './types';
+import { useEffect, useState, useMemo } from 'react';
+import type { Route, Stop, MatchResponse, H3CellGeometry } from './types';
 import { Map } from './components/Map';
 
 export default function App() {
@@ -19,22 +19,55 @@ export default function App() {
   const [showH3Rings, setShowH3Rings] = useState<boolean>(true);
   const [showRouteCells, setShowRouteCells] = useState<boolean>(true);
   
+  // Red zone edit mode
+  const [redZoneEditMode, setRedZoneEditMode] = useState<boolean>(false);
+  const [pendingRedZones, setPendingRedZones] = useState<H3CellGeometry[]>([]);
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [jsonText, setJsonText] = useState<string>('');
+  const [redZoneText, setRedZoneText] = useState<string>('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Derived: red zone cell array from textarea
+  const redZones = useMemo(() =>
+    redZoneText.split('\n').map(l => l.trim()).filter(l => l.length > 0),
+    [redZoneText]
+  );
+
+  // Save full data (routes + red zones) to server
+  const saveAllData = async () => {
+    const payload = { routes, red_zones: redZones };
+    setJsonText(JSON.stringify(payload, null, 2));
+    const res = await fetch('/api/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to save');
+    }
+  };
+
   // 1. Fetch routes on load
   const fetchRoutes = async () => {
     try {
-      const res = await fetch('/api/routes');
-      if (!res.ok) throw new Error('Failed to fetch routes data.');
-      const data = await res.json();
+      const [routesRes, rzRes] = await Promise.all([
+        fetch('/api/routes'),
+        fetch('/api/red-zones')
+      ]);
+      if (!routesRes.ok) throw new Error('Failed to fetch routes data.');
+      const data = await routesRes.json();
       setRoutes(data.routes || []);
       setJsonText(JSON.stringify(data, null, 2));
+      if (rzRes.ok) {
+        const rzData = await rzRes.json();
+        setRedZoneText(rzData.red_zones.join('\n'));
+      }
     } catch (err: any) {
       setError(err.message || 'Error fetching routes');
     }
@@ -66,8 +99,44 @@ export default function App() {
   }, [lat, lng, k, resolution, maxDistKm]);
 
   const handleMapClick = (clickLat: number, clickLng: number) => {
+    if (redZoneEditMode) return;
     setLat(Number(clickLat.toFixed(6)));
     setLng(Number(clickLng.toFixed(6)));
+  };
+
+  const handleGridCellToggle = (cellIndex: string, boundary: [number, number][]) => {
+    setPendingRedZones(prev => {
+      if (prev.some(c => c.index === cellIndex)) {
+        return prev.filter(c => c.index !== cellIndex);
+      }
+      if (redZones.includes(cellIndex)) return prev;
+      return [...prev, { index: cellIndex, boundary }];
+    });
+  };
+
+  const handleCancelRedZoneEdit = () => {
+    setPendingRedZones([]);
+    setRedZoneEditMode(false);
+  };
+
+  const handleSaveRedZones = async () => {
+    const updated = [...redZones, ...pendingRedZones.map(c => c.index)];
+    setRedZoneText(updated.join('\n'));
+    try {
+      const res = await fetch('/api/red-zones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ red_zones: updated }),
+      });
+      if (!res.ok) throw new Error('Failed to save red zones');
+      setPendingRedZones([]);
+      setRedZoneEditMode(false);
+      // Refresh match data to get updated red zone cells on map
+      const matchRes = await fetch(
+        `/api/match?lat=${lat}&lng=${lng}&k=${k}&res=${resolution}&max_dist_km=${maxDistKm}`
+      );
+      if (matchRes.ok) setMatchData(await matchRes.json());
+    } catch (e: any) { setError(e.message); }
   };
 
   const handleJsonSave = async () => {
@@ -76,7 +145,11 @@ export default function App() {
       if (!parsed.routes || !Array.isArray(parsed.routes)) {
         throw new Error('Invalid schema: Missing root "routes" array.');
       }
-      
+
+      // Merge red zones from the red zone state
+      parsed.red_zones = redZones;
+
+      // Save routes (includes red_zones in the full data)
       const res = await fetch('/api/routes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -246,6 +319,12 @@ export default function App() {
               Edit Route DB
             </button>
             <button
+              className={`btn ${redZoneEditMode ? 'btn-danger' : 'btn-secondary'}`}
+              onClick={() => setRedZoneEditMode(!redZoneEditMode)}
+            >
+              {redZoneEditMode ? 'Exit Red Zone Edit' : 'Edit Red Zones'}
+            </button>
+            <button
               className="btn btn-primary"
               onClick={() => {
                 setLat(9.016423);
@@ -258,6 +337,18 @@ export default function App() {
               Reset Config
             </button>
           </div>
+
+          {redZoneEditMode && (
+            <div className="redzone-edit-bar">
+              <span className="redzone-edit-label">
+                {pendingRedZones.length} cell{pendingRedZones.length !== 1 ? 's' : ''} selected
+              </span>
+              <div className="redzone-edit-actions">
+                <button className="btn btn-sm" onClick={handleCancelRedZoneEdit}>Cancel</button>
+                <button className="btn btn-sm btn-primary" onClick={handleSaveRedZones}>Save</button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Tab Selection */}
@@ -266,7 +357,7 @@ export default function App() {
             className={`tab-btn ${activeTab === 'dispatch' ? 'active' : ''}`}
             onClick={() => setActiveTab('dispatch')}
           >
-            Matches ({matchData?.matches.length || 0})
+            Matches ({matchData?.matches?.length || 0})
           </button>
           <button
             className={`tab-btn ${activeTab === 'explainer' ? 'active' : ''}`}
@@ -283,6 +374,15 @@ export default function App() {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--accent)' }}>
               Processing...
+            </div>
+          ) : matchData?.rejected ? (
+            /* Rejected Banner */
+            <div className="rejected-banner">
+              <div className="rejected-icon">&#9888;</div>
+              <div className="rejected-text">
+                <strong>Candidate Rejected</strong>
+                <p>{matchData.reason}</p>
+              </div>
             </div>
           ) : activeTab === 'dispatch' ? (
             /* Dispatch Tab */
@@ -334,6 +434,46 @@ export default function App() {
                         <span>Nearest Stop: <strong>{match.nearest_stop}</strong></span>
                         <span className="distance-value">{match.nearest_stop_km.toFixed(3)} km</span>
                       </div>
+
+                      {isSelected && routeMeta && (
+                        <div className="stop-editor" onClick={e => e.stopPropagation()}>
+                          <div className="stop-editor-header">Stops</div>
+                          {routeMeta.route_members.map((stop, si) => (
+                            <div key={si} className="stop-row">
+                              <span className="stop-order">{stop.stop_order}.</span>
+                              <span className="stop-name">{stop.name}</span>
+                              <span className="stop-coords">{stop.lat.toFixed(4)}, {stop.lng.toFixed(4)}</span>
+                              <button
+                                className="stop-remove-btn"
+                                title="Remove stop"
+                                onClick={async () => {
+                                  const updated = routeMeta.route_members.filter((_, i) => i !== si);
+                                  const reordered = updated.map((s, i) => ({ ...s, stop_order: i + 1 }));
+                                  const newRoute = { ...routeMeta, route_members: reordered };
+                                  setRoutes(prev => prev.map(r => r.route_name === newRoute.route_name ? newRoute : r));
+                                  try { await saveAllData(); } catch (e: any) { setError(e.message); }
+                                }}
+                              >&times;</button>
+                            </div>
+                          ))}
+                          <button
+                            className="btn btn-sm"
+                            onClick={async () => {
+                              const newStop: Stop = {
+                                stop_order: routeMeta.route_members.length + 1,
+                                name: `Stop ${routeMeta.route_members.length + 1}`,
+                                lat, lng,
+                                address: '',
+                                estimated_arrival: '',
+                                h3_index: ''
+                              };
+                              const newRoute = { ...routeMeta, route_members: [...routeMeta.route_members, newStop] };
+                              setRoutes(prev => prev.map(r => r.route_name === newRoute.route_name ? newRoute : r));
+                              try { await saveAllData(); } catch (e: any) { setError(e.message); }
+                            }}
+                          >+ Add Stop Here</button>
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -469,6 +609,10 @@ export default function App() {
         onMapClick={handleMapClick}
         showH3Rings={showH3Rings}
         showRouteCells={showRouteCells}
+        redZoneEditMode={redZoneEditMode}
+        pendingRedZones={pendingRedZones}
+        redZones={redZones}
+        onGridCellToggle={handleGridCellToggle}
       />
 
       {/* Edit Route Database Modal */}
@@ -503,6 +647,79 @@ export default function App() {
                 value={jsonText}
                 onChange={(e) => setJsonText(e.target.value)}
               />
+            </div>
+
+            <div className="form-group" style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
+              <label>Red Zone Cells <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.78rem' }}>({redZones.length} cells)</span></label>
+              <div className="rz-list">
+                {redZones.length > 0 ? redZones.map((cz, i) => (
+                  <div key={i} className="rz-row">
+                    <span className="rz-index">{cz}</span>
+                    <button
+                      className="stop-remove-btn"
+                      title="Remove red zone"
+                      onClick={async () => {
+                        const updated = redZones.filter((_, j) => j !== i);
+                        setRedZoneText(updated.join('\n'));
+                        try {
+                          const res = await fetch('/api/red-zones', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ red_zones: updated }),
+                          });
+                          if (!res.ok) throw new Error('Failed to save red zones');
+                        } catch (e: any) { setError(e.message); }
+                      }}
+                    >&times;</button>
+                  </div>
+                )) : (
+                  <div className="rz-empty">No red zones defined. Add a cell below.</div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  className="btn btn-sm"
+                  style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}
+                  onClick={async () => {
+                    const cell = matchData?.candidate_cell?.index;
+                    if (!cell) {
+                      setError('Click the map to set a candidate location first');
+                      return;
+                    }
+                    if (redZones.includes(cell)) return;
+                    const updated = [...redZones, cell];
+                    setRedZoneText(updated.join('\n'));
+                    try {
+                      const res = await fetch('/api/red-zones', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ red_zones: updated }),
+                      });
+                      if (!res.ok) throw new Error('Failed to save red zones');
+                    } catch (e: any) { setError(e.message); }
+                  }}
+                >+ Current Cell as Red Zone</button>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Or paste H3 cell IDs (one per line):</label>
+                <textarea
+                  style={{
+                    width: '100%',
+                    height: '70px',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--accent-red)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.8rem',
+                    padding: '8px',
+                    resize: 'vertical',
+                    marginTop: 4
+                  }}
+                  value={redZoneText}
+                  onChange={(e) => setRedZoneText(e.target.value)}
+                />
+              </div>
             </div>
 
             {jsonError && (

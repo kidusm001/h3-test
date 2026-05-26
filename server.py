@@ -20,6 +20,7 @@ app.add_middleware(
 )
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "route_data.json")
+RED_ZONE_RES = 9
 
 
 def load_routes_data():
@@ -70,6 +71,26 @@ def get_boundary_coords(cell_index: str) -> List[List[float]]:
         return []
 
 
+def fetch_osrm_route(coords: list) -> list:
+    if len(coords) < 2:
+        return coords
+    coords_str = ";".join([f"{lng},{lat}" for lat, lng in coords])
+    url = f"http://router.project-osrm.org/route/v1/driving/{coords_str}?overview=full&geometries=geojson"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "H3-Route-Matcher-Visualizer/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            if res_data.get("code") == "Ok" and res_data.get("routes"):
+                geojson_coords = res_data["routes"][0]["geometry"]["coordinates"]
+                return [[lat, lng] for lng, lat in geojson_coords]
+    except Exception as e:
+        print(f"Error fetching OSRM route: {e}")
+    return coords
+
+
 # Models for API validation
 class Stop(BaseModel):
     stop_order: int
@@ -101,29 +122,40 @@ class Route(BaseModel):
 
 class RoutesPayload(BaseModel):
     routes: List[Route]
+    red_zones: Optional[List[str]] = None
 
 
 OSRM_GEOMETRY_CACHE = {}
 
 
-def fetch_osrm_route(coords: list) -> list:
-    if len(coords) < 2:
-        return coords
-    coords_str = ";".join([f"{lng},{lat}" for lat, lng in coords])
-    url = f"http://router.project-osrm.org/route/v1/driving/{coords_str}?overview=full&geometries=geojson"
+class RedZonePayload(BaseModel):
+    red_zones: List[str]
+
+
+@app.get("/api/cell-info")
+def cell_info(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    res: int = Query(9),
+):
+    cell = h3.latlng_to_cell(lat, lng, res)
+    return {"index": cell, "boundary": get_boundary_coords(cell)}
+
+
+@app.get("/api/red-zones")
+def get_red_zones():
     try:
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "H3-Route-Matcher-Visualizer/1.0"}
-        )
-        with urllib.request.urlopen(req, timeout=5) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            if res_data.get("code") == "Ok" and res_data.get("routes"):
-                geojson_coords = res_data["routes"][0]["geometry"]["coordinates"]
-                return [[lat, lng] for lng, lat in geojson_coords]
+        data = load_routes_data()
+        rz_list = data.get("red_zones", [])
+        cells = []
+        for cz in rz_list:
+            try:
+                cells.append({"index": cz, "boundary": get_boundary_coords(cz)})
+            except Exception:
+                cells.append({"index": cz, "boundary": []})
+        return {"red_zones": rz_list, "cells": cells}
     except Exception as e:
-        print(f"Error fetching OSRM route: {e}")
-    return coords
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/routes")
@@ -137,9 +169,19 @@ def get_routes():
                 coords = [[s["lat"], s["lng"]] for s in route.get("route_members", [])]
                 actual_path = fetch_osrm_route(coords)
                 OSRM_GEOMETRY_CACHE[r_name] = actual_path
-            
             route["osrm_geometry"] = OSRM_GEOMETRY_CACHE[r_name]
         return {"routes": routes}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/red-zones")
+def save_red_zones(payload: RedZonePayload):
+    try:
+        data = load_routes_data()
+        data["red_zones"] = payload.red_zones
+        save_routes_data(data)
+        return {"status": "success", "message": "Red zones saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -147,10 +189,55 @@ def get_routes():
 @app.post("/api/routes")
 def save_routes(payload: RoutesPayload):
     try:
-      save_routes_data(payload.model_dump())
-      return {"status": "success", "message": "Routes saved successfully"}
+        data = payload.model_dump()
+        if payload.red_zones is None:
+            existing = load_routes_data()
+            data["red_zones"] = existing.get("red_zones", [])
+        save_routes_data(data)
+        return {"status": "success", "message": "Routes saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/cells-in-bounds")
+def cells_in_bounds(data: dict):
+    north = data.get("north")
+    south = data.get("south")
+    east = data.get("east")
+    west = data.get("west")
+    res = data.get("res", 9)
+
+    if any(v is None for v in [north, south, east, west]):
+        raise HTTPException(status_code=400, detail="north, south, east, west are required")
+
+    poly = h3.LatLngPoly([
+        (north, west),
+        (north, east),
+        (south, east),
+        (south, west),
+        (north, west),
+    ])
+
+    try:
+        cells = list(h3.polygon_to_cells(poly, res))
+        if len(cells) > 10000:
+            raise HTTPException(status_code=400, detail=f"Too many cells ({len(cells)}). Maximum is 10000.")
+    except HTTPException:
+        raise
+    except Exception:
+        centroid_lat = (north + south) / 2
+        centroid_lng = (east + west) / 2
+        cells = [h3.latlng_to_cell(centroid_lat, centroid_lng, res)]
+
+    result = []
+    for cell in cells:
+        try:
+            boundary = get_boundary_coords(cell)
+            result.append({"index": cell, "boundary": boundary})
+        except Exception:
+            result.append({"index": cell, "boundary": []})
+
+    return {"cells": result}
 
 
 @app.get("/api/match")
@@ -168,6 +255,28 @@ def match_candidate(
         # Step 2: Index Candidate (Convert candidate coords to H3 Cell)
         candidate_cell = h3.latlng_to_cell(lat, lng, res)
         candidate_boundary = get_boundary_coords(candidate_cell)
+
+        # Red Zone Check (candidate at fixed resolution)
+        red_zone_cells_raw = routes_data.get("red_zones", [])
+        red_zone_cells = []
+        for cz in red_zone_cells_raw:
+            try:
+                cz_boundary = get_boundary_coords(cz)
+                red_zone_cells.append({"index": cz, "boundary": cz_boundary})
+            except Exception:
+                pass
+        red_zone_set = set(routes_data.get("red_zones", []))
+        candidate_at_rz_res = h3.latlng_to_cell(lat, lng, RED_ZONE_RES)
+        if candidate_at_rz_res in red_zone_set:
+            return {
+                "rejected": True,
+                "reason": "Candidate location is in a restricted area",
+                "candidate_cell": {
+                    "index": candidate_cell,
+                    "boundary": candidate_boundary
+                },
+                "red_zone_cells": red_zone_cells
+            }
 
         # Step 3: Grid Ring Expansion (Search Pool)
         ring_cells = list(h3.grid_disk(candidate_cell, k))
@@ -325,7 +434,8 @@ def match_candidate(
             "k_ring_cells": k_ring_data,
             "db_hits": db_hits,
             "matches": matches,
-            "path_pass_cells": path_pass_cells
+            "path_pass_cells": path_pass_cells,
+            "red_zone_cells": red_zone_cells
         }
 
     except Exception as e:

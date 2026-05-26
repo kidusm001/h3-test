@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import type { Route, MatchResponse } from '../types';
+import type { Route, MatchResponse, H3CellGeometry } from '../types';
 
 const C = {
   accent: '#e8a840',
@@ -21,6 +21,10 @@ interface MapProps {
   onMapClick: (lat: number, lng: number) => void;
   showH3Rings: boolean;
   showRouteCells: boolean;
+  redZoneEditMode?: boolean;
+  pendingRedZones?: H3CellGeometry[];
+  redZones?: string[];
+  onGridCellToggle?: (index: string, boundary: [number, number][]) => void;
 }
 
 const getRouteColor = (name: string) => {
@@ -51,10 +55,15 @@ export const Map: React.FC<MapProps> = ({
   onMapClick,
   showH3Rings,
   showRouteCells,
+  redZoneEditMode = false,
+  pendingRedZones = [],
+  redZones = [],
+  onGridCellToggle,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layersGroupRef = useRef<L.LayerGroup | null>(null);
+  const [gridCells, setGridCells] = useState<H3CellGeometry[]>([]);
 
   // 1. Initialize Map
   useEffect(() => {
@@ -88,6 +97,46 @@ export const Map: React.FC<MapProps> = ({
       }
     };
   }, []);
+
+  // 1b. Always keep grid cells cached so they're instantly available in edit mode
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let timeout: number;
+    const DEBOUNCE = redZoneEditMode ? 300 : 2000;
+
+    const fetchCells = () => {
+      const bounds = map.getBounds();
+      fetch('/api/cells-in-bounds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+          res: 9,
+        }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.cells) setGridCells(data.cells);
+        })
+        .catch(() => {});
+    };
+
+    fetchCells();
+    map.on('moveend', () => {
+      clearTimeout(timeout);
+      timeout = window.setTimeout(fetchCells, DEBOUNCE);
+    });
+
+    return () => {
+      clearTimeout(timeout);
+      map.off('moveend');
+    };
+  }, [redZoneEditMode]);
 
   // 2. Redraw Layers
   useEffect(() => {
@@ -140,7 +189,7 @@ export const Map: React.FC<MapProps> = ({
 
     // B. Draw candidate matching geometry
     if (matchData) {
-      const { candidate_cell, k_ring_cells, matches, db_hits, path_pass_cells } = matchData;
+      const { candidate_cell, k_ring_cells, matches, db_hits, path_pass_cells, red_zone_cells } = matchData;
 
       // 1. Draw K-Ring Cells (outer rings) if enabled
       if (showH3Rings && k_ring_cells) {
@@ -167,8 +216,37 @@ export const Map: React.FC<MapProps> = ({
         }).addTo(layers);
       }
 
+      // 2b. Draw Red Zone Cells (existing) — only when NOT in grid edit mode
+      if (!redZoneEditMode && red_zone_cells && red_zone_cells.length > 0) {
+        red_zone_cells.forEach(cell => {
+          if (!cell.boundary || cell.boundary.length === 0) return;
+          L.polygon(cell.boundary, {
+            color: C.accentRed,
+            weight: 2.5,
+            opacity: 0.7,
+            fillColor: C.accentRed,
+            fillOpacity: 0.18
+          }).addTo(layers);
+        });
+      }
+
+      // 2c. Draw Pending Red Zone Cells — only when NOT in grid edit mode
+      if (!redZoneEditMode && pendingRedZones && pendingRedZones.length > 0) {
+        pendingRedZones.forEach(cell => {
+          if (!cell.boundary || cell.boundary.length === 0) return;
+          L.polygon(cell.boundary, {
+            color: '#f97316',
+            weight: 2.5,
+            opacity: 0.85,
+            fillColor: '#f97316',
+            fillOpacity: 0.25,
+            dashArray: '6, 4'
+          }).addTo(layers);
+        });
+      }
+
       // 3. Highlight Overlapping Route Cells if enabled
-      if (showRouteCells && selectedRouteName) {
+      if (showRouteCells && selectedRouteName && matches) {
         const currentMatch = matches.find(m => m.route_name === selectedRouteName);
         if (currentMatch) {
           currentMatch.exact_cells.forEach(cell => {
@@ -204,6 +282,33 @@ export const Map: React.FC<MapProps> = ({
             fillOpacity: 0.25,
             dashArray: '4, 4'
           }).addTo(layers);
+        });
+      }
+
+      // 3c. H3 Grid overlay for red zone edit mode
+      if (redZoneEditMode && gridCells.length > 0) {
+        const redZoneSet = new Set(redZones);
+        const pendingSet = new Set(pendingRedZones.map(c => c.index));
+
+        gridCells.forEach(cell => {
+          if (!cell.boundary || cell.boundary.length === 0) return;
+
+          const isSaved = redZoneSet.has(cell.index);
+          const isPending = pendingSet.has(cell.index);
+
+          const poly = L.polygon(cell.boundary, {
+            color: isSaved ? C.accentRed : isPending ? '#f97316' : '#555',
+            weight: isSaved ? 2.5 : isPending ? 2.5 : 0.8,
+            opacity: isSaved ? 0.7 : isPending ? 0.85 : 0.35,
+            fillColor: isSaved ? C.accentRed : isPending ? '#f97316' : 'transparent',
+            fillOpacity: isSaved ? 0.18 : isPending ? 0.25 : 0,
+            dashArray: isPending ? '6, 4' : undefined,
+          });
+          poly.on('click', (e) => {
+            L.DomEvent.stopPropagation(e.originalEvent);
+            onGridCellToggle?.(cell.index, cell.boundary);
+          });
+          poly.addTo(layers);
         });
       }
 
@@ -244,7 +349,7 @@ export const Map: React.FC<MapProps> = ({
       }
 
       // 5. Highlight Nearest Stop path for selected route
-      if (selectedRouteName) {
+      if (selectedRouteName && matches) {
         const currentMatch = matches.find(m => m.route_name === selectedRouteName);
         const routeObj = routes.find(r => r.route_name === selectedRouteName);
         if (currentMatch && routeObj) {
@@ -289,7 +394,7 @@ export const Map: React.FC<MapProps> = ({
     `);
     candidateMarker.addTo(layers);
 
-  }, [lat, lng, routes, matchData, selectedRouteName, showH3Rings, showRouteCells]);
+  }, [lat, lng, routes, matchData, selectedRouteName, showH3Rings, showRouteCells, redZoneEditMode, pendingRedZones]);
 
   useEffect(() => {
     if (mapRef.current) {
@@ -298,10 +403,12 @@ export const Map: React.FC<MapProps> = ({
   }, [lat, lng]);
 
   return (
-    <div className="map-container">
+    <div className={`map-container ${redZoneEditMode ? 'rz-edit-mode' : ''}`}>
       <div ref={mapContainerRef} className="map-element" />
-      <div className="map-overlay-instructions">
-        Click map to set candidate location
+      <div className={`map-overlay-instructions ${redZoneEditMode ? 'rz-edit-active' : ''}`}>
+        {redZoneEditMode
+          ? 'Click any hexagon on the grid to toggle it as a red zone'
+          : 'Click map to set candidate location'}
       </div>
     </div>
   );

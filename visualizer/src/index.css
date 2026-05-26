@@ -257,6 +257,16 @@ input[type="range"] {
   border: 1px solid var(--border);
 }
 
+.btn-danger {
+  background: oklch(0.2 0.06 30);
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+}
+
+.btn-danger:hover {
+  background: oklch(0.25 0.07 30);
+}
+
 .btn-secondary:hover {
   background: var(--bg-elevated);
 }
@@ -302,6 +312,38 @@ input[type="range"] {
   background: var(--bg-surface);
   border-radius: 8px;
   border: 1px dashed var(--border);
+}
+
+.rejected-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background: oklch(0.18 0.06 30);
+  border: 1px solid var(--accent-red);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.rejected-icon {
+  font-size: 1.8rem;
+  color: var(--accent-red);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.rejected-text strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--accent-red);
+  margin-bottom: 6px;
+}
+
+.rejected-text p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .route-card {
@@ -395,6 +437,150 @@ input[type="range"] {
 .distance-value {
   font-weight: 700;
   color: var(--accent);
+}
+
+/* Stop editor */
+.stop-editor {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.stop-editor-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.stop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  margin-bottom: 4px;
+}
+
+.stop-order {
+  color: var(--text-muted);
+  min-width: 18px;
+  font-weight: 600;
+}
+
+.stop-name {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.stop-coords {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.stop-remove-btn {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.stop-remove-btn:hover {
+  opacity: 1;
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-sm:hover {
+  background: var(--bg-elevated);
+}
+
+/* Red zone edit bar */
+.redzone-edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: oklch(0.2 0.06 30);
+  border: 1px solid var(--accent-red);
+  border-radius: 6px;
+}
+
+.redzone-edit-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-red);
+}
+
+.redzone-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Grid edit mode — crosshair cursor on map */
+.rz-edit-mode,
+.rz-edit-mode .leaflet-container {
+  cursor: crosshair !important;
+}
+
+.map-overlay-instructions.rz-edit-active {
+  background: oklch(0.2 0.06 30) !important;
+  border-color: var(--accent-red) !important;
+  color: var(--accent-red) !important;
+}
+
+/* Red zone list in modal */
+.rz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.rz-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: oklch(0.18 0.04 30);
+  border: 1px solid oklch(0.28 0.06 30);
+  border-radius: 4px;
+}
+
+.rz-index {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent-red);
+}
+
+.rz-empty {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .status-indicator {

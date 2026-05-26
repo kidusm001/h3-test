@@ -64,4 +64,7 @@ export interface MatchResponse {
   db_hits: DatabaseHit[];
   matches: RouteMatch[];
   path_pass_cells?: H3CellGeometry[];
+  red_zone_cells?: H3CellGeometry[];
+  rejected?: boolean;
+  reason?: string;
 }
