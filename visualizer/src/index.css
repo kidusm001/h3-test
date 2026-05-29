@@ -385,6 +385,29 @@ input[type="range"] {
   border-radius: 4px;
 }
 
+.score-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.score-badge.high {
+  background: oklch(0.22 0.04 145);
+  color: var(--accent-green);
+}
+
+.score-badge.mid {
+  background: oklch(0.24 0.04 75);
+  color: var(--accent-amber);
+}
+
+.score-badge.low {
+  background: oklch(0.24 0.04 15);
+  color: var(--accent-red);
+}
+
 .match-badge.exact {
   background: oklch(0.22 0.04 145);
   color: var(--accent-green);
@@ -538,6 +561,21 @@ input[type="range"] {
   gap: 6px;
 }
 
+.rz-res-select {
+  appearance: none;
+  font-size: 0.72rem !important;
+  padding: 4px 6px !important;
+  font-family: var(--font-mono);
+  background: var(--bg-surface) !important;
+  color: var(--accent-red) !important;
+  border: 1px solid var(--accent-red) !important;
+  cursor: pointer;
+}
+
+.rz-res-select:hover {
+  background: var(--bg-elevated) !important;
+}
+
 /* Grid edit mode — crosshair cursor on map */
 .rz-edit-mode,
 .rz-edit-mode .leaflet-container {
@@ -589,6 +627,29 @@ input[type="range"] {
   height: 8px;
   border-radius: 50%;
   margin-right: 6px;
+}
+
+.load-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.load-badge.ok {
+  background: oklch(0.22 0.04 145);
+  color: var(--accent-green);
+}
+
+.load-badge.nearly-full {
+  background: oklch(0.24 0.04 75);
+  color: var(--accent-amber);
+}
+
+.load-badge.full {
+  background: oklch(0.24 0.04 15);
+  color: var(--accent-red);
 }
 
 .status-active { background: var(--accent-green); }

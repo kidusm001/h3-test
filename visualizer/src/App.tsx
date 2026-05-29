@@ -22,6 +22,7 @@ export default function App() {
   // Red zone edit mode
   const [redZoneEditMode, setRedZoneEditMode] = useState<boolean>(false);
   const [pendingRedZones, setPendingRedZones] = useState<H3CellGeometry[]>([]);
+  const [rzRes, setRzRes] = useState<number>(9);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -344,6 +345,16 @@ export default function App() {
                 {pendingRedZones.length} cell{pendingRedZones.length !== 1 ? 's' : ''} selected
               </span>
               <div className="redzone-edit-actions">
+                <select
+                  className="btn btn-sm rz-res-select"
+                  value={rzRes}
+                  onChange={(e) => setRzRes(Number(e.target.value))}
+                  title="Red zone grid resolution"
+                >
+                  <option value="8">Res 8 (~460m)</option>
+                  <option value="9">Res 9 (~170m)</option>
+                  <option value="10">Res 10 (~66m)</option>
+                </select>
                 <button className="btn btn-sm" onClick={handleCancelRedZoneEdit}>Cancel</button>
                 <button className="btn btn-sm btn-primary" onClick={handleSaveRedZones}>Save</button>
               </div>
@@ -408,9 +419,16 @@ export default function App() {
                     >
                       <div className="route-card-header">
                         <span className="route-name">{match.route_name}</span>
-                        <span className={`match-badge ${match.exact_match ? 'exact' : match.matched_by === 'path' ? 'path' : 'nearby'}`}>
-                          {match.exact_match ? 'Exact Match' : match.matched_by === 'path' ? 'Path Pass-through' : 'Nearby Stop'}
-                        </span>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {match.score !== undefined && (
+                            <span className={`score-badge ${match.score >= 0.7 ? 'high' : match.score >= 0.4 ? 'mid' : 'low'}`}>
+                              {match.score.toFixed(2)}
+                            </span>
+                          )}
+                          <span className={`match-badge ${match.exact_match ? 'exact' : match.matched_by === 'path' ? 'path' : 'nearby'}`}>
+                            {match.exact_match ? 'Exact Match' : match.matched_by === 'path' ? 'Path Pass-through' : 'Nearby Stop'}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="route-meta">
@@ -428,6 +446,14 @@ export default function App() {
                         <div className="meta-item">
                           <span className="meta-label">Type:</span> {routeMeta?.route_type || 'Drop-off'}
                         </div>
+                        {match.vehicle_capacity && (
+                          <div className="meta-item">
+                            <span className="meta-label">Load:</span>
+                            <span className={`load-badge ${(match.current_load ?? 0) >= match.vehicle_capacity ? 'full' : (match.current_load ?? 0) >= match.vehicle_capacity * 0.75 ? 'nearly-full' : 'ok'}`}>
+                              {match.current_load}/{match.vehicle_capacity}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="distance-highlight">
@@ -613,6 +639,7 @@ export default function App() {
         pendingRedZones={pendingRedZones}
         redZones={redZones}
         onGridCellToggle={handleGridCellToggle}
+        rzRes={rzRes}
       />
 
       {/* Edit Route Database Modal */}

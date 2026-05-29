@@ -20,7 +20,6 @@ app.add_middleware(
 )
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "route_data.json")
-RED_ZONE_RES = 9
 
 
 def load_routes_data():
@@ -71,6 +70,17 @@ def get_boundary_coords(cell_index: str) -> List[List[float]]:
         return []
 
 
+def compute_stop_score(ring_distance: int, haversine_km: float, k: int, max_dist_km: float) -> float:
+    ring_score = 1.0 - (ring_distance / (k + 1))
+    dist_score = 1.0 - min(haversine_km / max_dist_km, 1.0)
+    return round((ring_score * 0.6 + dist_score * 0.4) * 0.5, 4)
+
+
+def compute_path_score(overlap_ratio: float, nearest_stop_km: float, max_dist_km: float) -> float:
+    dist_score = max(0.0, 1.0 - (nearest_stop_km / max_dist_km))
+    return round(overlap_ratio * 0.7 + dist_score * 0.3, 4)
+
+
 def fetch_osrm_route(coords: list) -> list:
     if len(coords) < 2:
         return coords
@@ -118,6 +128,7 @@ class Route(BaseModel):
     route_members: List[Stop]
     h3_cells: List[str]
     osrm_geometry: Optional[List[List[float]]] = None
+    vehicle_capacity: Optional[int] = None
 
 
 class RoutesPayload(BaseModel):
@@ -252,12 +263,30 @@ def match_candidate(
         routes_data = load_routes_data()
         routes = routes_data.get("routes", [])
 
+        # Exclude fully loaded routes — no capacity for new passengers
+        routes = [
+            r for r in routes
+            if not (
+                r.get("vehicle_capacity") and
+                len(r.get("route_members", [])) >= r["vehicle_capacity"]
+            )
+        ]
+
         # Step 2: Index Candidate (Convert candidate coords to H3 Cell)
         candidate_cell = h3.latlng_to_cell(lat, lng, res)
         candidate_boundary = get_boundary_coords(candidate_cell)
 
-        # Red Zone Check (candidate at fixed resolution)
+        # Red Zone Check — works at any resolution the cells were saved at
         red_zone_cells_raw = routes_data.get("red_zones", [])
+        # Group red zone cells by their actual resolution so we check correctly
+        red_zones_by_res = {}
+        for cz in red_zone_cells_raw:
+            try:
+                cz_res = h3.get_resolution(cz)
+                red_zones_by_res.setdefault(cz_res, set()).add(cz)
+            except Exception:
+                pass
+
         red_zone_cells = []
         for cz in red_zone_cells_raw:
             try:
@@ -265,9 +294,14 @@ def match_candidate(
                 red_zone_cells.append({"index": cz, "boundary": cz_boundary})
             except Exception:
                 pass
-        red_zone_set = set(routes_data.get("red_zones", []))
-        candidate_at_rz_res = h3.latlng_to_cell(lat, lng, RED_ZONE_RES)
-        if candidate_at_rz_res in red_zone_set:
+
+        rejected = False
+        for rz_res_tmp, cells_at_res in red_zones_by_res.items():
+            if h3.latlng_to_cell(lat, lng, rz_res_tmp) in cells_at_res:
+                rejected = True
+                break
+
+        if rejected:
             return {
                 "rejected": True,
                 "reason": "Candidate location is in a restricted area",
@@ -306,6 +340,7 @@ def match_candidate(
                     distance_km = h3.great_circle_distance((lat, lng), (stop["lat"], stop["lng"]), unit="km")
                     passed = distance_km <= max_dist_km
                     is_exact = stop_hex == candidate_cell
+                    ring_distance = h3.grid_distance(candidate_cell, stop_hex)
                     
                     db_hits.append({
                         "route_name": route["route_name"],
@@ -315,7 +350,8 @@ def match_candidate(
                         "stop_h3": stop_hex,
                         "distance_km": round(distance_km, 3),
                         "passed": passed,
-                        "is_exact_cell": is_exact
+                        "is_exact_cell": is_exact,
+                        "ring_distance": ring_distance,
                     })
 
         # Group valid matches by route to structure route assignment results
@@ -341,7 +377,8 @@ def match_candidate(
                     "nearest_stop": hit["stop_name"],
                     "exact_cells": [],
                     "nearby_cells": [],
-                    "matched_by": "stop"
+                    "matched_by": "stop",
+                    "score": 0.0,
                 }
             
             summary = routes_summary[r_name]
@@ -363,6 +400,13 @@ def match_candidate(
             if hit["distance_km"] < summary["nearest_stop_km"]:
                 summary["nearest_stop_km"] = hit["distance_km"]
                 summary["nearest_stop"] = hit["stop_name"]
+
+            # Compute score for this stop and keep the best per route
+            stop_score = compute_stop_score(
+                hit["ring_distance"], hit["distance_km"], k, max_dist_km
+            )
+            if stop_score > summary["score"]:
+                summary["score"] = stop_score
 
         # Collect path-match geometry cells for map visualization
         path_pass_cells = []
@@ -387,6 +431,15 @@ def match_candidate(
 
             overlap_cells = path_cells & ring_set
             if overlap_cells:
+                # Weighted overlap: each overlapping cell counts proportionally
+                # to how close its ring is to the candidate (ring 0 = 1.0, ring k = 1/(k+1))
+                total_weight = sum(
+                    1.0 / (h3.grid_distance(candidate_cell, c) + 1) for c in ring_cells
+                )
+                overlap_weight = sum(
+                    1.0 / (h3.grid_distance(candidate_cell, c) + 1) for c in overlap_cells
+                )
+                weighted_overlap_ratio = overlap_weight / total_weight if total_weight > 0 else 0
                 # Route path passes through candidate area — find nearest stop regardless
                 stops = route.get("route_members", [])
                 nearest_stop_km = min(
@@ -418,12 +471,22 @@ def match_candidate(
                     "exact_cells": [],
                     "nearby_cells": [],
                     "matched_by": "path",
-                    "path_overlap_cells": overlap_geom
+                    "path_overlap_cells": overlap_geom,
+                    "score": compute_path_score(
+                        weighted_overlap_ratio, nearest_stop_km, max_dist_km
+                    ),
                 }
 
-        # Sort summary results: exact match first, then by nearest stop distance
+        # Attach load info to each route match for frontend display
         matches = list(routes_summary.values())
-        matches.sort(key=lambda m: (not m["exact_match"], {"path": 2, "stop": 1}.get(m.get("matched_by", "stop"), 1), m["nearest_stop_km"]))
+        for m in matches:
+            route_ref = next((r for r in routes if r["route_name"] == m["route_name"]), None)
+            if route_ref:
+                m["current_load"] = len(route_ref.get("route_members", []))
+                m["vehicle_capacity"] = route_ref.get("vehicle_capacity")
+
+        # Sort summary results by score descending, then distance as tiebreaker
+        matches.sort(key=lambda m: (-m["score"], m["nearest_stop_km"]))
 
         return {
             "sql_query": mock_sql,

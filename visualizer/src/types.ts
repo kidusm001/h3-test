@@ -24,6 +24,7 @@ export interface Route {
   route_members: Stop[];
   h3_cells: string[];
   osrm_geometry?: [number, number][];
+  vehicle_capacity?: number;
 }
 
 export interface H3CellGeometry {
@@ -44,6 +45,9 @@ export interface RouteMatch {
   nearby_cells: H3CellGeometry[];
   matched_by?: 'stop' | 'path';
   path_overlap_cells?: H3CellGeometry[];
+  score?: number;
+  current_load?: number;
+  vehicle_capacity?: number;
 }
 
 export interface DatabaseHit {
@@ -55,6 +59,7 @@ export interface DatabaseHit {
   distance_km: number;
   passed: boolean;
   is_exact_cell: boolean;
+  ring_distance: number;
 }
 
 export interface MatchResponse {

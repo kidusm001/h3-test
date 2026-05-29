@@ -25,6 +25,7 @@ interface MapProps {
   pendingRedZones?: H3CellGeometry[];
   redZones?: string[];
   onGridCellToggle?: (index: string, boundary: [number, number][]) => void;
+  rzRes?: number;
 }
 
 const getRouteColor = (name: string) => {
@@ -59,11 +60,13 @@ export const Map: React.FC<MapProps> = ({
   pendingRedZones = [],
   redZones = [],
   onGridCellToggle,
+  rzRes = 9,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layersGroupRef = useRef<L.LayerGroup | null>(null);
   const [gridCells, setGridCells] = useState<H3CellGeometry[]>([]);
+  const gridFetchedRef = useRef(false);
 
   // 1. Initialize Map
   useEffect(() => {
@@ -106,7 +109,17 @@ export const Map: React.FC<MapProps> = ({
     let timeout: number;
     const DEBOUNCE = redZoneEditMode ? 300 : 2000;
 
+    gridFetchedRef.current = false;
+
     const fetchCells = () => {
+      // Skip fetch when zoomed out — cells would be too small to click and
+      // the bounding box might cover an enormous area, causing server timeouts
+      if (map.getZoom() < 10) {
+        gridFetchedRef.current = true;
+        setGridCells([]);
+        return;
+      }
+
       const bounds = map.getBounds();
       fetch('/api/cells-in-bounds', {
         method: 'POST',
@@ -116,14 +129,15 @@ export const Map: React.FC<MapProps> = ({
           south: bounds.getSouth(),
           east: bounds.getEast(),
           west: bounds.getWest(),
-          res: 9,
+          res: rzRes,
         }),
       })
         .then(r => r.json())
         .then(data => {
+          gridFetchedRef.current = true;
           if (data.cells) setGridCells(data.cells);
         })
-        .catch(() => {});
+        .catch(() => { gridFetchedRef.current = true; });
     };
 
     fetchCells();
@@ -136,7 +150,7 @@ export const Map: React.FC<MapProps> = ({
       clearTimeout(timeout);
       map.off('moveend');
     };
-  }, [redZoneEditMode]);
+  }, [redZoneEditMode, rzRes]);
 
   // 2. Redraw Layers
   useEffect(() => {
@@ -289,9 +303,16 @@ export const Map: React.FC<MapProps> = ({
       if (redZoneEditMode && gridCells.length > 0) {
         const redZoneSet = new Set(redZones);
         const pendingSet = new Set(pendingRedZones.map(c => c.index));
+        const paddedBounds = map.getBounds().pad(-0.15);
 
         gridCells.forEach(cell => {
           if (!cell.boundary || cell.boundary.length === 0) return;
+
+          // Skip cells whose centroid is outside the padded viewport
+          // to avoid rendering clipped hexagons at map edges
+          const cx = cell.boundary.reduce((s, p) => s + p[0], 0) / cell.boundary.length;
+          const cy = cell.boundary.reduce((s, p) => s + p[1], 0) / cell.boundary.length;
+          if (!paddedBounds.contains([cx, cy])) return;
 
           const isSaved = redZoneSet.has(cell.index);
           const isPending = pendingSet.has(cell.index);
@@ -407,7 +428,9 @@ export const Map: React.FC<MapProps> = ({
       <div ref={mapContainerRef} className="map-element" />
       <div className={`map-overlay-instructions ${redZoneEditMode ? 'rz-edit-active' : ''}`}>
         {redZoneEditMode
-          ? 'Click any hexagon on the grid to toggle it as a red zone'
+          ? gridFetchedRef.current && gridCells.length === 0
+            ? 'Zoom in closer to see the H3 grid and select red zones'
+            : 'Click any hexagon on the grid to toggle it as a red zone'
           : 'Click map to set candidate location'}
       </div>
     </div>
